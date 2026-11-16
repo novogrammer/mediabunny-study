@@ -1,12 +1,12 @@
 import './style.scss'
 
-import { Canvas2DRenderer } from './Canvas2DRenderer';
+import { Canvas2DFrameRenderer } from './Canvas2DFrameRenderer';
 import { VideoExporter } from './VideoExporter';
 import type { OnProgress } from './VideoExporter';
 
 function setupPreview(){
   const canvas = document.querySelector<HTMLCanvasElement>('#preview')!;
-  const previewRenderer = new Canvas2DRenderer(canvas.width, canvas.height, canvas);
+  const previewRenderer = new Canvas2DFrameRenderer(canvas.width, canvas.height, canvas);
   
   const startTime = performance.now();
   
@@ -24,9 +24,9 @@ function setupPreview(){
 async function exportMp4Async(onProgress?: OnProgress) {
   const fps = 30;
 
-  const canvas2DRenderer = new Canvas2DRenderer(640, 360);
+  const canvas2DFrameRenderer = new Canvas2DFrameRenderer(640, 360);
   
-  const videoExporter = await VideoExporter.createAsync(canvas2DRenderer,fps);
+  const videoExporter = await VideoExporter.createAsync(canvas2DFrameRenderer,fps);
 
   await videoExporter.renderAllFramesAsync(onProgress);
 

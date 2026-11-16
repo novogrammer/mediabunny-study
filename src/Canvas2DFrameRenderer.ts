@@ -1,6 +1,6 @@
 import type { FrameRenderer } from './FrameRenderer';
 
-export class Canvas2DRenderer implements FrameRenderer {
+export class Canvas2DFrameRenderer implements FrameRenderer {
   readonly canvas: HTMLCanvasElement;
   readonly duration = 5;
   private ctx: CanvasRenderingContext2D;
