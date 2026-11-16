@@ -11,6 +11,7 @@ import {
 
 const appElement = document.querySelector<HTMLDivElement>('#app')!;
 
+type OnProgress = (progress: number) => void;
 
 interface FrameRenderer {
   readonly canvas: HTMLCanvasElement;
@@ -55,13 +56,15 @@ class VideoExporter {
     await this.frameRenderer.renderAsync(time);
     await this.source.add(time, 1 / this.fps);
   }
-  async renderAllFramesAsync() {
+  async renderAllFramesAsync(onProgress?:OnProgress) {
     const frameCount = Math.ceil(
       this.fps * this.frameRenderer.duration
     );
+    onProgress?.(0);
   
     for (let frame = 0; frame < frameCount; frame++) {
       await this.renderFrameAsync(frame / this.fps);
+      onProgress?.((frame + 1) / frameCount);
     }
   }
   async finishAsync(){
