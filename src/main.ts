@@ -34,9 +34,13 @@ class VideoExporter {
       format: new Mp4OutputFormat(),
       target: new BufferTarget(),
     });
+    const fullCodecString = fps > 30
+      ? 'avc1.420028' // 60fps：level 4.0
+      : 'avc1.420020' // 30fps：level 3.2
     this.source = new CanvasSource(this.frameRenderer.canvas, {
       codec: 'avc',
       quality: new Quality('high'),
+      fullCodecString,
     });
     this.output.addVideoTrack(this.source, { frameRate: this.fps });
 
