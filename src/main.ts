@@ -120,7 +120,7 @@ function setupPreview(){
 }
 
 
-async function exportMp4(onProgress?: OnProgress) {
+async function exportMp4Async(onProgress?: OnProgress) {
   const fps = 30;
 
   const canvas2DRenderer = new Canvas2DRenderer(640, 360);
@@ -147,7 +147,7 @@ function setupExport(){
     progressElement.value = 0;
   
     try {
-      const blob = await exportMp4((progress) => {
+      const blob = await exportMp4Async((progress) => {
         progressElement.value = progress;
       });
   
