@@ -9,8 +9,6 @@ import {
 } from 'mediabunny';
 
 
-const appElement = document.querySelector<HTMLDivElement>('#app')!;
-
 type OnProgress = (progress: number) => void;
 
 interface FrameRenderer {
@@ -80,13 +78,19 @@ class VideoExporter {
 }
 
 class Canvas2DRenderer implements FrameRenderer {
-  readonly canvas = document.createElement('canvas');
+  readonly canvas: HTMLCanvasElement;
   readonly duration = 5;
-  private ctx = this.canvas.getContext('2d')!;
+  private ctx: CanvasRenderingContext2D;
 
-  constructor(width: number, height: number) {
+  constructor(
+    width: number,
+    height: number,
+    canvas: HTMLCanvasElement = document.createElement('canvas'),
+  ) {
+    this.canvas = canvas;
     this.canvas.width = width;
     this.canvas.height = height;
+    this.ctx = this.canvas.getContext('2d')!;
   }
 
   async renderAsync(time: number) {
@@ -100,8 +104,8 @@ class Canvas2DRenderer implements FrameRenderer {
 
 
 function setupPreview(){
-  const previewRenderer = new Canvas2DRenderer(640, 360);
-  appElement.appendChild(previewRenderer.canvas);
+  const canvas = document.querySelector<HTMLCanvasElement>('#preview')!;
+  const previewRenderer = new Canvas2DRenderer(canvas.width, canvas.height, canvas);
   
   const startTime = performance.now();
   
@@ -132,12 +136,10 @@ async function exportMp4() {
 }
 
 function setupExport(){
-  const button = document.createElement('button');
-  button.textContent = 'Export MP4';
-  appElement.appendChild(button);
+  const button = document.querySelector<HTMLButtonElement>('#export-button')!;
+  const downloadLink = document.querySelector<HTMLAnchorElement>('#download-link')!;
   
   let downloadUrl: string | null = null;
-  let downloadLink: HTMLAnchorElement | null = null;
   
   button.addEventListener('click', async () => {
     button.disabled = true;
@@ -145,19 +147,15 @@ function setupExport(){
     try {
       const blob = await exportMp4();
   
-      // 前回のリンクを削除
-      downloadLink?.remove();
+      // 前回のURLを解放
       if (downloadUrl) {
         URL.revokeObjectURL(downloadUrl);
       }
   
-      // ダウンロードリンクを生成
+      // ダウンロードリンクを更新
       downloadUrl = URL.createObjectURL(blob);
-      downloadLink = document.createElement('a');
       downloadLink.href = downloadUrl;
-      downloadLink.download = 'output.mp4';
-      downloadLink.textContent = 'MP4をダウンロード';
-      appElement.appendChild(downloadLink);
+      downloadLink.hidden = false;
     } catch (error) {
       console.error(error);
     } finally {

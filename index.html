@@ -6,7 +6,11 @@
     <title>mediabunny-study</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <canvas id="preview" width="640" height="360"></canvas>
+      <button id="export-button" type="button">Export MP4</button>
+      <a id="download-link" download="output.mp4" hidden>MP4をダウンロード</a>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
