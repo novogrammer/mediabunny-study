@@ -6,31 +6,27 @@ import type { FrameRenderer } from './FrameRenderer';
 import { VideoExporter } from './VideoExporter';
 import type { OnProgress } from './VideoExporter';
 
-function createFrameRenderer(type: string, canvas?: HTMLCanvasElement): FrameRenderer {
+function createFrameRenderer(type: string): FrameRenderer {
   return type === 'webgl'
-    ? new WebGLFrameRenderer(640, 360, canvas)
-    : new Canvas2DFrameRenderer(640, 360, canvas);
+    ? new WebGLFrameRenderer(640, 360)
+    : new Canvas2DFrameRenderer(640, 360);
 }
 
 function setupPreview(rendererSelect: HTMLSelectElement){
-  // 2DとWebGLのコンテキストは同じcanvasで切り替えられないため、別々に用意する。
-  const canvas2D = document.querySelector<HTMLCanvasElement>('#preview')!;
-  const webglCanvas = document.querySelector<HTMLCanvasElement>('#webgl-preview')!;
+  const previewElement = document.querySelector<HTMLDivElement>('#preview')!;
   const renderers = new Map<string, FrameRenderer>();
   let previewRenderer: FrameRenderer;
   let startTime = performance.now();
 
   function switchRenderer() {
     const type = rendererSelect.value;
-    const canvas = type === 'webgl' ? webglCanvas : canvas2D;
     let renderer = renderers.get(type);
     if (!renderer) {
-      renderer = createFrameRenderer(type, canvas);
+      renderer = createFrameRenderer(type);
       renderers.set(type, renderer);
     }
     previewRenderer = renderer;
-    canvas2D.hidden = type === 'webgl';
-    webglCanvas.hidden = type !== 'webgl';
+    previewElement.replaceChildren(previewRenderer.canvas);
     startTime = performance.now();
   }
 
