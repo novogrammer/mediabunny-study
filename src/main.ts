@@ -1,14 +1,41 @@
 import './style.scss'
 
 import { Canvas2DFrameRenderer } from './Canvas2DFrameRenderer';
+import { WebGLFrameRenderer } from './WebGLFrameRenderer';
+import type { FrameRenderer } from './FrameRenderer';
 import { VideoExporter } from './VideoExporter';
 import type { OnProgress } from './VideoExporter';
 
-function setupPreview(){
-  const canvas = document.querySelector<HTMLCanvasElement>('#preview')!;
-  const previewRenderer = new Canvas2DFrameRenderer(canvas.width, canvas.height, canvas);
-  
-  const startTime = performance.now();
+function createFrameRenderer(type: string, canvas?: HTMLCanvasElement): FrameRenderer {
+  return type === 'webgl'
+    ? new WebGLFrameRenderer(640, 360, canvas)
+    : new Canvas2DFrameRenderer(640, 360, canvas);
+}
+
+function setupPreview(rendererSelect: HTMLSelectElement){
+  // 2DとWebGLのコンテキストは同じcanvasで切り替えられないため、別々に用意する。
+  const canvas2D = document.querySelector<HTMLCanvasElement>('#preview')!;
+  const webglCanvas = document.querySelector<HTMLCanvasElement>('#webgl-preview')!;
+  const renderers = new Map<string, FrameRenderer>();
+  let previewRenderer: FrameRenderer;
+  let startTime = performance.now();
+
+  function switchRenderer() {
+    const type = rendererSelect.value;
+    const canvas = type === 'webgl' ? webglCanvas : canvas2D;
+    let renderer = renderers.get(type);
+    if (!renderer) {
+      renderer = createFrameRenderer(type, canvas);
+      renderers.set(type, renderer);
+    }
+    previewRenderer = renderer;
+    canvas2D.hidden = type === 'webgl';
+    webglCanvas.hidden = type !== 'webgl';
+    startTime = performance.now();
+  }
+
+  switchRenderer();
+  rendererSelect.addEventListener('change', switchRenderer);
   
   async function animateAsync() {
     const time = ((performance.now() - startTime) / 1000) % previewRenderer.duration;
@@ -21,22 +48,21 @@ function setupPreview(){
 }
 
 
-async function exportMp4Async(onProgress?: OnProgress) {
+async function exportMp4Async(rendererType: string, onProgress?: OnProgress) {
   const fps = 30;
 
-  const canvas2DFrameRenderer = new Canvas2DFrameRenderer(640, 360);
-  
-  const videoExporter = await VideoExporter.createAsync(canvas2DFrameRenderer,fps);
-
-  await videoExporter.renderAllFramesAsync(onProgress);
-
-  const blob = await videoExporter.finishAsync();
-
-  return blob;
+  const frameRenderer = createFrameRenderer(rendererType);
+  try {
+    const videoExporter = await VideoExporter.createAsync(frameRenderer,fps);
+    await videoExporter.renderAllFramesAsync(onProgress);
+    return await videoExporter.finishAsync();
+  } finally {
+    frameRenderer.dispose?.();
+  }
 
 }
 
-function setupExport(){
+function setupExport(rendererSelect: HTMLSelectElement){
   const button = document.querySelector<HTMLButtonElement>('#export-button')!;
   const progressElement = document.querySelector<HTMLProgressElement>('#export-progress')!;
   const downloadLink = document.querySelector<HTMLAnchorElement>('#download-link')!;
@@ -45,10 +71,11 @@ function setupExport(){
   
   button.addEventListener('click', async () => {
     button.disabled = true;
+    rendererSelect.disabled = true;
     progressElement.value = 0;
   
     try {
-      const blob = await exportMp4Async((progress) => {
+      const blob = await exportMp4Async(rendererSelect.value, (progress) => {
         progressElement.value = progress;
       });
   
@@ -65,14 +92,16 @@ function setupExport(){
       console.error(error);
     } finally {
       button.disabled = false;
+      rendererSelect.disabled = false;
     }
   });
   
 }
 
 async function mainAsync(){
-  setupPreview();
-  setupExport();
+  const rendererSelect = document.querySelector<HTMLSelectElement>('#renderer-select')!;
+  setupPreview(rendererSelect);
+  setupExport(rendererSelect);
   
 }
 

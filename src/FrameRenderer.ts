@@ -3,4 +3,5 @@ export interface FrameRenderer {
   readonly duration: number;
 
   renderAsync(time: number): Promise<void>;
+  dispose?(): void;
 }

@@ -9,11 +9,13 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/three": "^0.187.0",
     "sass": "^1.108.2",
     "typescript": "~7.0.2",
     "vite": "^8.3.6"
   },
   "dependencies": {
-    "mediabunny": "^1.66.0"
+    "mediabunny": "^1.66.0",
+    "three": "^0.187.0"
   }
 }

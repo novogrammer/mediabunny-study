@@ -7,7 +7,13 @@
   </head>
   <body>
     <div id="app">
+      <label for="renderer-select">レンダラー</label>
+      <select id="renderer-select">
+        <option value="canvas2d">Canvas 2D</option>
+        <option value="webgl">WebGL (Three.js)</option>
+      </select>
       <canvas id="preview" width="640" height="360"></canvas>
+      <canvas id="webgl-preview" width="640" height="360" hidden></canvas>
       <button id="export-button" type="button">Export MP4</button>
       <progress id="export-progress" max="1" value="0" aria-label="フレーム処理の進捗"></progress>
       <a id="download-link" download="output.mp4" hidden>MP4をダウンロード</a>
