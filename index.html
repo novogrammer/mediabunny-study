@@ -9,6 +9,7 @@
     <div id="app">
       <canvas id="preview" width="640" height="360"></canvas>
       <button id="export-button" type="button">Export MP4</button>
+      <progress id="export-progress" max="1" value="0" aria-label="フレーム処理の進捗"></progress>
       <a id="download-link" download="output.mp4" hidden>MP4をダウンロード</a>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -120,14 +120,14 @@ function setupPreview(){
 }
 
 
-async function exportMp4() {
+async function exportMp4(onProgress?: OnProgress) {
   const fps = 30;
 
   const canvas2DRenderer = new Canvas2DRenderer(640, 360);
   
   const videoExporter = await VideoExporter.createAsync(canvas2DRenderer,fps);
 
-  await videoExporter.renderAllFramesAsync();
+  await videoExporter.renderAllFramesAsync(onProgress);
 
   const blob = await videoExporter.finishAsync();
 
@@ -137,15 +137,19 @@ async function exportMp4() {
 
 function setupExport(){
   const button = document.querySelector<HTMLButtonElement>('#export-button')!;
+  const progressElement = document.querySelector<HTMLProgressElement>('#export-progress')!;
   const downloadLink = document.querySelector<HTMLAnchorElement>('#download-link')!;
   
   let downloadUrl: string | null = null;
   
   button.addEventListener('click', async () => {
     button.disabled = true;
+    progressElement.value = 0;
   
     try {
-      const blob = await exportMp4();
+      const blob = await exportMp4((progress) => {
+        progressElement.value = progress;
+      });
   
       // 前回のURLを解放
       if (downloadUrl) {
