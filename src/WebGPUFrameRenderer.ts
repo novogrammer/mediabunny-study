@@ -1,11 +1,6 @@
 import * as THREE from 'three/webgpu';
 import type { FrameRenderer } from './FrameRenderer';
-
-interface RenderRequest {
-  time: number;
-  resolve: () => void;
-  reject: (error: unknown) => void;
-}
+import { RenderQueue } from './RenderQueue';
 
 export class WebGPUFrameRenderer implements FrameRenderer {
   readonly canvas: HTMLCanvasElement;
@@ -17,7 +12,7 @@ export class WebGPUFrameRenderer implements FrameRenderer {
   private material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
   private cube = new THREE.Mesh(this.geometry, this.material);
   private initPromise?: Promise<void>;
-  private renderQueue: RenderRequest[] = [];
+  private renderQueue = new RenderQueue();
   private disposed = false;
 
   constructor(
@@ -38,17 +33,11 @@ export class WebGPUFrameRenderer implements FrameRenderer {
     if (this.disposed) return;
     await this.renderer.setAnimationLoop(() => {
       // Three.jsの内部フレーム更新後に、1表示フレームにつき1件だけ描画する。
-      const request = this.renderQueue.shift();
-      if (!request) return;
-
-      try {
-        this.cube.rotation.x = request.time / 2;
-        this.cube.rotation.y = request.time;
+      this.renderQueue.processNext((time) => {
+        this.cube.rotation.x = time / 2;
+        this.cube.rotation.y = time;
         this.renderer.render(this.scene, this.camera);
-        request.resolve();
-      } catch (error) {
-        request.reject(error);
-      }
+      });
     });
   }
 
@@ -58,18 +47,13 @@ export class WebGPUFrameRenderer implements FrameRenderer {
     await this.initPromise;
     if (this.disposed) throw new Error('レンダラーは破棄されています。');
 
-    return new Promise<void>((resolve, reject) => {
-      this.renderQueue.push({ time, resolve, reject });
-    });
+    return this.renderQueue.enqueue(time);
   }
 
   async dispose(): Promise<void> {
     if (this.disposed) return;
     this.disposed = true;
-    const error = new Error('描画が完了する前にレンダラーが破棄されました。');
-    for (const request of this.renderQueue.splice(0)) {
-      request.reject(error);
-    }
+    this.renderQueue.dispose();
 
     this.geometry.dispose();
     this.material.dispose();
