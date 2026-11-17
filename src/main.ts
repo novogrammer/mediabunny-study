@@ -79,11 +79,13 @@ function setupPreview(rendererSelect: HTMLSelectElement){
         console.error(disposeError);
       }
     } finally {
-      requestAnimationFrame(animateAsync);
+      // 描画完了後に次の時刻を取得する。同期的に描画するレンダラーでも
+      // イベント処理へ制御を戻せるよう、次のタスクとして要求する。
+      setTimeout(animateAsync, 0);
     }
   }
   
-  requestAnimationFrame(animateAsync);
+  void animateAsync();
 }
 
 
