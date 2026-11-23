@@ -96,6 +96,14 @@ mainのWebGPU版では、描画要求をキューへ登録し、Three.js内部�
 
 以前の別プロジェクトで試した、FFmpegをWebAssemblyとしてブラウザ内で動かす方式についてのメモ。このプロジェクトには導入していない。
 
+ffmpeg.wasmは、FFmpegとエンコーダーをWasmとしてブラウザへ持ち込む方式。`libx264` によるH.264エンコードは、CPUでのソフトウェア処理になる。Web Workerへの分離やマルチスレッド化も、CPU処理の分離・並列化であり、ハードウェアエンコーダーの利用とは別。
+
+今回のMediabunny版は、ブラウザが提供するWebCodecsのエンコーダーを使い、フレームの投入とMP4への格納をMediabunnyに任せる方式。環境によってはハードウェアエンコードを利用できる。
+
+ネイティブのFFmpeg本体はハードウェアエンコードにも対応している。CPU処理という説明は、ffmpeg.wasmの `libx264` を使う構成についてのもの。
+
+参考：[ffmpeg.wasmの構成](https://ffmpegwasm.netlify.app/docs/overview/)、[x264公式](https://images.videolan.org/developers/x264.html)、[Mediabunny公式概要](https://mediabunny.dev/guide/introduction)、[FFmpegのコーデック資料](https://ffmpeg.org/ffmpeg-codecs.html)
+
 ### メモリ負荷が大きい
 
 通常の使い方では、入力を仮想ファイルシステムに書き込み、変換後の出力もそこから読み出す。入力・出力に加えて、デコード・エンコードの作業領域が必要になる。連番画像をすべて保持してから動画にする構成では、画像の保持分も積み上がる。
@@ -103,12 +111,6 @@ mainのWebGPU版では、描画要求をキューへ登録し、Three.js内部�
 確認した公式ビルドスクリプトでは、マルチスレッド版の初期メモリは1024MB、シングルスレッド版は32MBから必要に応じて拡張する設定。初期メモリ量はビルドによって異なる。
 
 参考：[公式概要](https://ffmpegwasm.netlify.app/docs/overview/)、[ビルドスクリプト](https://github.com/ffmpegwasm/ffmpeg.wasm/blob/main/build/ffmpeg-wasm.sh)
-
-### H.264エンコードはCPUでのソフトウェア処理
-
-標準構成の `libx264` によるH.264エンコードは、Wasm上で実行するソフトウェア処理。Web Workerへの分離やマルチスレッド化はCPU処理の分離・並列化であり、ハードウェアエンコーダーの利用とは別。
-
-参考：[ffmpeg.wasmの構成](https://ffmpegwasm.netlify.app/docs/overview/)、[x264公式](https://images.videolan.org/developers/x264.html)
 
 ### iOSでは初期メモリの確保と共有メモリの利用条件に注意が必要だった
 
