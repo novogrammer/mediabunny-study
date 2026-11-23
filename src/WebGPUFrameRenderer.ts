@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
 import type { FrameRenderer } from './FrameRenderer';
-import { RenderQueue } from './RenderQueue';
 
 export class WebGPUFrameRenderer implements FrameRenderer {
   readonly canvas: HTMLCanvasElement;
@@ -19,8 +18,7 @@ export class WebGPUFrameRenderer implements FrameRenderer {
   private floorMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 1 });
   private floor = new THREE.Mesh(this.floorGeometry, this.floorMaterial);
   private light = new THREE.DirectionalLight(0xffffff, 3);
-  private initPromise?: Promise<void>;
-  private renderQueue = new RenderQueue();
+  private initPromise?: Promise<THREE.WebGPURenderer>;
   private disposed = false;
 
   constructor(
@@ -69,47 +67,35 @@ export class WebGPUFrameRenderer implements FrameRenderer {
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
   }
 
-  private async initAsync(): Promise<void> {
-    await this.renderer.init();
-    if (this.disposed) return;
-    await this.renderer.setAnimationLoop(() => {
-      // Three.jsの内部フレーム更新後に、1表示フレームにつき1件だけ描画する。
-      this.renderQueue.processNext((time) => {
-        this.cube.rotation.x = time / 2;
-        this.cube.rotation.y = time;
-
-        this.orbitCubes.forEach((cube, index) => {
-          const angle = (time / this.duration) * Math.PI * 2 + index * Math.PI / 2;
-          cube.position.set(Math.cos(angle) * 2, 1.5, Math.sin(angle) * 2);
-          cube.rotation.x = time / 2;
-          cube.rotation.y = time;
-
-          // 1秒から0.25秒間隔で出現。0秒に戻したときも表示・サイズを再計算する。
-          const elapsed = time - (1 + index * 0.25);
-          cube.visible = elapsed >= 0;
-          const progress = THREE.MathUtils.clamp(elapsed / 0.2, 0, 1);
-          const scale = 0.5 * (1 + 0.2 * (1 - progress) ** 3);
-          cube.scale.setScalar(scale);
-        });
-
-        this.renderer.render(this.scene, this.camera);
-      });
-    });
-  }
-
   async renderAsync(time: number): Promise<void> {
     if (this.disposed) throw new Error('レンダラーは破棄されています。');
-    this.initPromise ??= this.initAsync();
+    this.initPromise ??= this.renderer.init();
     await this.initPromise;
     if (this.disposed) throw new Error('レンダラーは破棄されています。');
 
-    return this.renderQueue.enqueue(time);
+    this.cube.rotation.x = time / 2;
+    this.cube.rotation.y = time;
+
+    this.orbitCubes.forEach((cube, index) => {
+      const angle = (time / this.duration) * Math.PI * 2 + index * Math.PI / 2;
+      cube.position.set(Math.cos(angle) * 2, 1.5, Math.sin(angle) * 2);
+      cube.rotation.x = time / 2;
+      cube.rotation.y = time;
+
+      // 1秒から0.25秒間隔で出現。0秒に戻したときも表示・サイズを再計算する。
+      const elapsed = time - (1 + index * 0.25);
+      cube.visible = elapsed >= 0;
+      const progress = THREE.MathUtils.clamp(elapsed / 0.2, 0, 1);
+      const scale = 0.5 * (1 + 0.2 * (1 - progress) ** 3);
+      cube.scale.setScalar(scale);
+    });
+
+    this.renderer.render(this.scene, this.camera);
   }
 
   async dispose(): Promise<void> {
     if (this.disposed) return;
     this.disposed = true;
-    this.renderQueue.dispose();
 
     this.geometry.dispose();
     this.material.dispose();
@@ -124,9 +110,6 @@ export class WebGPUFrameRenderer implements FrameRenderer {
         // 初期化失敗時はThree.js側のdisposeも同じPromiseで失敗する。
         return;
       }
-    }
-    if (this.renderer.initialized) {
-      await this.renderer.setAnimationLoop(null);
     }
     await this.renderer.dispose();
   }
