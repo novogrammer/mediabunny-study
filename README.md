@@ -22,8 +22,6 @@ npm test
 npm run build
 ```
 
-テストはVitestのNode環境で描画キューの動作を確認します。実GPUの描画は検証しません。
-
 ## 主なファイル
 
 - `src/FrameRenderer.ts`：描画処理の共通インターフェース
