@@ -91,3 +91,32 @@ mainのWebGPU版では、描画要求をキューへ登録し、Three.js内部�
 プレビューも同じ呼び出し方にし、描画完了後に現在時刻を取り直す。表示フレームレートへの追従を必須にせず、未処理の要求を積み上げない構成にした。
 
 この方式では、WebGPU版の書き出し速度は表示ループの頻度に制約される。バックグラウンドでループが抑制されると、書き出しも遅くなる可能性がある。動画内の時刻は引き続きフレーム番号で決める。
+
+## ffmpeg.wasm
+
+以前の別プロジェクトで試した、FFmpegをWebAssemblyとしてブラウザ内で動かす方式についてのメモ。このプロジェクトには導入していない。
+
+### メモリ負荷が大きい
+
+通常の使い方では、入力を仮想ファイルシステムに書き込み、変換後の出力もそこから読み出す。入力・出力に加えて、デコード・エンコードの作業領域が必要になる。連番画像をすべて保持してから動画にする構成では、画像の保持分も積み上がる。
+
+確認した公式ビルドスクリプトでは、マルチスレッド版の初期メモリは1024MB、シングルスレッド版は32MBから必要に応じて拡張する設定。初期メモリ量はビルドによって異なる。
+
+参考：[公式概要](https://ffmpegwasm.netlify.app/docs/overview/)、[ビルドスクリプト](https://github.com/ffmpegwasm/ffmpeg.wasm/blob/main/build/ffmpeg-wasm.sh)
+
+### H.264エンコードはCPUでのソフトウェア処理
+
+標準構成の `libx264` によるH.264エンコードは、Wasm上で実行するソフトウェア処理。Web Workerへの分離やマルチスレッド化はCPU処理の分離・並列化であり、ハードウェアエンコーダーの利用とは別。
+
+参考：[ffmpeg.wasmの構成](https://ffmpegwasm.netlify.app/docs/overview/)、[x264公式](https://images.videolan.org/developers/x264.html)
+
+### iOSでは初期メモリの確保と共有メモリの利用条件に注意が必要だった
+
+iOSでの制約は、確保するメモリ量の問題と、共有メモリを利用できる条件を分けて考える。
+
+- **初期メモリの確保**：Issue #299には、iOS 15.2などで `ffmpeg.load()` がメモリ不足で失敗する報告がある。初期メモリを約2GBから1GBへ減らしたカスタムビルドで、iOS Safariで動作したという報告もある。入力ファイルの大きさだけでなく、ロード時の確保量も問題になる。
+- **共有メモリの利用条件**：マルチスレッド版には `SharedArrayBuffer` が必要。Safari 15.2では、COOP・COEPヘッダーによる分離を条件に共有メモリとWasmスレッドが再び利用可能になった。シングルスレッド版には同じ共有メモリの要件はない。
+
+「iOSでは共有メモリが使えない」「iOSのメモリ上限は一律1GB」とは一般化せず、当時の環境とビルド設定に関する制約として扱う。
+
+参考：[iOSのメモリ不足に関するIssue #299](https://github.com/ffmpegwasm/ffmpeg.wasm/issues/299)、[マルチスレッド版の利用条件](https://ffmpegwasm.netlify.app/docs/getting-started/usage/)、[WebKitのSafari 15.2解説](https://webkit.org/blog/12140/new-webkit-features-in-safari-15-2/)
